@@ -57,7 +57,7 @@ class printClass {
 	}
 	
 	_onResize() {
-		this.outputEditCtrl.move("w" (this.output.ClientPos.w-20) " h" (this.output.ClientPos.h-30), true)
+		this.outputEditCtrl.move("w" (this.output.ClientPos.w-20) " h" (this.output.ClientPos.h-10), true)
 	}
 	
 	_print(msg) {
