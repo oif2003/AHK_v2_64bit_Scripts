@@ -28,7 +28,7 @@
 	I have yet to find a reliable solution that works for all commands and programs.  For limited case such as using only julia.exe, this might work.
 */
 #include classMemory_AHK2_64bit.ahk
-#include print.ahk
+;#include print.ahk
 #SingleInstance force
 
 iniFile := "cmdMonitor.ini"
