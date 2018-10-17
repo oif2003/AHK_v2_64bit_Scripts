@@ -45,8 +45,7 @@ class printClass {
 			
 			this.output.OnEvent("Size", () => this._onResize())
 			this.output.Show()
-			this.outputStatusBar.SetParts(	  this.output.ClientPos.w * (1 - this.statusPercent)
-											, this.output.ClientPos.w * this.statusPercent)
+
 			WinWait("ahk_id " this.output.Hwnd)
 			
 			this.Hwnd := this.output.Hwnd
