@@ -1,0 +1,1 @@
+editor:CopyText(props['FilePath'])

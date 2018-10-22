@@ -27,8 +27,8 @@
 	  Detection of user input and command execution states can be done for certain programs that run inside the Command Prompt.
 	I have yet to find a reliable solution that works for all commands and programs.  For limited case such as using only julia.exe, this might work.
 */
-#include classMemory_AHK2_64bit.ahk
-;#include print.ahk
+#include <classMemory_AHK2_64bit>
+;#include <print>
 #SingleInstance force
 
 iniFile := "cmdMonitor.ini"

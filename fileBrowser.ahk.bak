@@ -1,0 +1,4 @@
+#include <print>
+
+SelectedFile := FileSelect()
+msgbox("You selected: " SelectedFile)

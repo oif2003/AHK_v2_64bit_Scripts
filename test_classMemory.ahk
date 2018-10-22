@@ -1,6 +1,6 @@
 #singleinstance force
-#include classMemory_AHK2_64bit.ahk
-#include print.ahk
+#include <classMemory_AHK2_64bit>
+#include <print>
 
 if !WinExist("Command Prompt") {
 	Msgbox("Open Command Prompt first!")
