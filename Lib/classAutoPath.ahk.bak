@@ -1,17 +1,18 @@
+/* classAutoPath.ahk
 #SingleInstance force
 
 a := new classAutoPath(A_WinDir, "w500")
 while true {
 	if a.ready || a.error
 		break
-	sleep 500
+	sleep 100
 }
 
 if a.error
 	MsgBox("error")
 if a.ready
-	Run(a.path)
-
+	MsgBox(a.path)
+*/
 
 Class classAutoPath {
 	path := ""
@@ -46,9 +47,7 @@ Class classAutoPath {
 		
 		;Setup keybind for "/" (auto-complete)
 		HotKey("IfWinActive", "ahk_id " this.gui.hwnd)
-		;HotKey("/", ()=>this.autoComplete())			;so / can be used as to pass parameters
-		HotKey("Tab", ()=>this.autoComplete())
-		HotKey("+Tab", ()=>this.autoComplete(-1))
+		HotKey("/", ()=>this.autoComplete())
 		HotKey("If")
 
 		;initial display
@@ -118,7 +117,7 @@ Class classAutoPath {
 	}
 
 	;code for auto-completion
-	autoComplete(direction := 1) {
+	autoComplete() {
 		static index := 1
 		static prevPath := ""
 
@@ -134,11 +133,9 @@ Class classAutoPath {
 		found := false
 		for k, v in this.listPrev {
 			if this.editBox.Value == v {
-				index := k + 1 * direction
+				index := k + 1
 				if index > this.listPrev.Length()
 					index := 1
-				else if index < 1
-					index := this.listPrev.Length()
 				found := true
 				break
 			}	
