@@ -36,12 +36,15 @@ textBox.Value :=    "You can evaluate functions here, and they can be nested (as
 				. '`n"ans" is the variable that holds the last returned value.'
 				. '`n`n'
 
-;you can use f.add(counter, 0) to retrieve its value or f.set("counter", 0) to reset its value
-counter := 0
-while true {
-	counter++
-	sleep 1000
-}
+;~ ;you can use f.add(counter, 0) to retrieve its value or f.set("counter", 0) to reset its value
+;~ counter := 0
+;~ while true {
+	;~ counter++
+	;~ sleep 1000
+;~ }
+
+
+
 
 ;debug print to debugBox editbox
 dprint(msg) {
@@ -57,6 +60,7 @@ eval() {
 	textBox.Value := textBox.Value . "`n" . editBox.Value . "`n>" ans
 	editBox.Value := ""
 	PostMessage( 0x115, 7, , "Edit2", "ahk_id " gui.hwnd)
+
 }
 
 
@@ -186,6 +190,7 @@ class f {
 		;handles generic expressions, and decides what to do with them
 		expr(str) {
 			global
+
 			local r
 			local parenPos := InStr(str, "(")
 			local braketPos := InStr(str, "[")
@@ -247,7 +252,8 @@ class f {
 					_param := SubStr(funcString, lastPos, A_Index - lastPos)
 					_param := Trim(_param, " `t`n`r")
 					
-					param2.push(_param)
+					if _param != ""
+						param2.push(_param)
 					lastPos := A_Index + 1
 				}
 				
@@ -255,8 +261,37 @@ class f {
 					_param := SubStr(funcString, lastPos, A_Index - lastPos)
 					_param := Trim(_param, " `t`n`r")
 					
-					param2.push(_param)
+					if _param != ""
+						param2.push(_param)
 				}
+			}
+			
+			;convert param* into param[1], param[2], param[3] ... (variadic)
+			for k, v in param2 {
+				if SubStr(v, -1, 1) == "*" {
+					if f.parse.isFunc(v) {
+						local arrParam := f.parse.expr(SubStr(v, 1, -1))
+						for i, j in arrParam {
+							if i == 1 {
+								param2[k] := j
+							}
+							else {
+								param2.push(j)
+							}
+						}
+					}
+					else {
+						for i, j in %SubStr(v, 1, InStr(v, "*") - 1)% {
+							;msgbox(j ":" (j is "Number"))
+							if i == 1 {
+								param2[k] := j
+							}
+							else {
+								param2.push(j)
+							}
+						}
+					}
+				}	
 			}
 			
 			;exceptions are coded here, ie: short-circuit and/or... etc
@@ -347,11 +382,18 @@ class f {
 				}
 				
 				if !bcount {
-					pArr.push(f.parse.expr(SubStr(str, last + 1, A_Index - last - 1)))
-					last := A_Index + 1
+					local tmp := f.parse.expr(SubStr(str, last + 1, A_Index - last - 1))
+					;msgbox("tmp:[" tmp "]")
+					;~ if StrLen(tmp)>0 {
+						pArr.push(tmp)
+						last := A_Index + 1
+					;~ }
 				}
 			}
-			
+			;~ if !pArr.Length() {
+				;~ msgbox("name:" name "  str:" str)
+				;~ return %str%
+			;~ }
 			local r := %name%
 			local i := 1
 			while IsObject(r) {
@@ -371,9 +413,9 @@ class f {
 		;handles variables so we can extract their values
 		variable(str) {
 			global
-			local r
+			
 			try {
-				r :=  %str%
+				r := %str%
 			}
 			catch {
 				r := ""
@@ -387,14 +429,16 @@ class f {
 			return str + 0
 		}
 		
-		;test to see if we have a function.  Not used since it doesn't recongize Gui methods
-		;instead, we assume object looking things that are not objects (f.isObject) are functions
+		;isFunc is now used for variadic params
+		;[old] test to see if we have a function.  Not used since it doesn't recongize Gui methods
+		;[old] instead, we assume object looking things that are not objects (f.isObject) are functions
 		isFunc(s) {
 			global
+			local pPos := InStr(s, "(")	
 			local firstDot := InStr(funcName, ".")
 			
 			if !firstDot {
-				return isFunc(s)
+				return isFunc(SubStr(s, 1, pPos - 1))
 			}	
 			else {
 				local dotMethod := SubStr(s, firstDot)
