@@ -1,35 +1,34 @@
 #singleinstance force
 
 /*
-Expression(expr)
-	string - start with " (double quote only) => remove quotation marks
-	function (include method) => evaluate
-	Object => fetch element
-	number => number + 0
-	variable => %variable%
-
-	whenever something new is encountered, we call f.parse.expr(newStringToExamine)
-
-
+The Idea:
+1) User input string for evaluation
+2) Save all string literals (stuff inside quotation marks) and replace them with tokens
+3) Convert Infix operators to Prefix (functions)
+4) Parse the functions based on its type:
+	a) string - get rid of quotation marks
+	b) function / method - evaluate
+	c) object / array - get its value
+	d) number - convert it from string to value (=> number + 0)
+	e) variable - %variable%
+	f) keep parsing until we get one of the above
 */
 
 gui := GuiCreate()
 gui.SetFont(, "Consolas")
-editBox := gui.Add("Edit", "r1 w600", 'f._if(f.gt(InputBox(),100), MsgBox("Greater than 100"), MsgBox("Less than 100"))')
+editBox := gui.Add("Edit", "r1 w600", 'f._if(InputBox()>100, MsgBox("Greater than 100"), MsgBox("Less than or equal to 100"))')
 btn := gui.Add("Button", "Default w0 h0", "OK")
 btn.OnEvent("Click", "eval")
 gui.Add("Text", , "Output:")
 textBox := gui.Add("Edit", "r20 w600 ReadOnly -wrap", "")
 gui.Add("Text", , "Debug Output:")
-debugBox := gui.Add("Edit", "r20 w600 ReadOnly -wrap", "")
+debugBox := gui.Add("Edit", "r10 w600 ReadOnly -wrap", "")
 gui.Show()
+
 
 debugBox.Value := "You can see how functions are evaluated here"
 textBox.Value :=    "You can evaluate functions here, and they can be nested (as in the example above)"
 				. "`nBuilting functions such as MsgBox/InputBox are supported.  You can even create a gui here."
-				. "`nTo perform simple arithmetics, use f.add(a,b), f.mul(a,b), f.div(a,b)... see file for more"
-				. "`nf.set(String_Name_of_Variable, value_to_assign, optional_array_indices)"
-				. '`n  => for example: f.set("a", 100, 1, 2) performs a[1,2]:=100'
 				. '`nTo get object properties/array item use obj["class1"]["prop"] or arr[1][2][3]'
 				. '`n"counter" is an increasing counter, you can use f.add(counter, 0) to retrieve'
 				. '`nits value or f.set("counter", 0) to reset its value.'
@@ -43,9 +42,6 @@ textBox.Value :=    "You can evaluate functions here, and they can be nested (as
 	;~ sleep 1000
 ;~ }
 
-
-
-
 ;debug print to debugBox editbox
 dprint(msg) {
 	global
@@ -55,8 +51,8 @@ dprint(msg) {
 
 eval() {
 	global
-	
-	ans := f.parse.expr(editBox.Value)
+	str := f.funcnator(editBox.Value)
+	ans := f.parse.expr(str)
 	textBox.Value := textBox.Value . "`n" . editBox.Value . "`n>" ans
 	editBox.Value := ""
 	PostMessage( 0x115, 7, , "Edit2", "ahk_id " gui.hwnd)
@@ -65,9 +61,489 @@ eval() {
 
 
 class f {
-	static layer := -1 ;used for debug output's indentations
+	static ranOnce := false
+	
+	;unused Unicode characters
+	static basecode := 0x1abf - 1
+	
+	;Operators are defined here
+	;order them from top (high priority) to bottom (low priority)
+	;if two operations have the same priority
+	;assign it the "priority" property pointing to the first occurence
+	;of an operator with the desired priority level.  See below for example.
+	static operators   :=[{	
+							"operator":"**",
+							"function":"f.pow",
+							"operands":2  
+						},{	
+							"operator":"!",
+							"function":"f.not",
+							"operands":1  
+						;~ },{	
+							;~ "operator":"~",
+							;~ "function":"f.not",
+							;~ "operands":"1"  
+						},{	
+							"operator":"*",
+							"function":"f.mul",
+							"operands":2  
+						},{	
+							"operator":"/",
+							"function":"f.div",
+							"operands":2,
+							"priority":"*"
+						},{	
+							"operator":"//",
+							"function":"f.divf",
+							"operands":2,
+							"priority":"*"
+						},{	
+							"operator":"+",
+							"function":"f.add",
+							"operands":2  
+						},{	
+							"operator":"-",
+							"function":"f.sub",
+							"operands":2,
+							"priority":"+"							
+						;~ },{	
+							;~ "operator":"<<",
+							;~ "function":"f.set",
+							;~ "operands":"2"  
+						;~ },{	
+							;~ "operator":">>",
+							;~ "function":"f.not",
+							;~ "operands":"1"  
+						;~ },{	
+							;~ "operator":"&",
+							;~ "function":"f.set",
+							;~ "operands":"2"  
+						;~ },{	
+							;~ "operator":"^",
+							;~ "function":"f.not",
+							;~ "operands":"1"  
+						;~ },{	
+							;~ "operator":"|",
+							;~ "function":"f.set",
+							;~ "operands":"2"  
+						},{	
+							"operator":" . ",
+							"function":"f.cat",
+							"operands":2  
+						},{	
+							"operator":"~=",
+							"function":"f.regex",
+							"operands":2  
+						},{	
+							"operator":">",
+							"function":"f.gt",
+							"operands":2  
+						},{	
+							"operator":"<",
+							"function":"f.lt",
+							"operands":2,
+							"priority":">"								
+						},{	
+							"operator":">=",
+							"function":"f.gteq",
+							"operands":2,
+							"priority":">" 
+						},{	
+							"operator":"<=",
+							"function":"f.lseq",
+							"operands":2,
+							"priority":">"  
+						},{	
+							"operator":"=",
+							"function":"f.eqci",
+							"operands":2 
+						},{	
+							"operator":"==",
+							"function":"f.eq",
+							"operands":2,
+							"priority":"="  
+						},{	
+							"operator":"!=",
+							"function":"f.neq",
+							"operands":2,
+							"priority":"="  
+						;~ },{	
+							;~ "operator":"!==",
+							;~ "function":"f.not",
+							;~ "operands":"1"  
+						;~ },{	
+							;~ "operator":"is",
+							;~ "function":"f.set",
+							;~ "operands":"2"  
+						;~ },{	
+							;~ "operator":"not",
+							;~ "function":"f.not",
+							;~ "operands":"1"  
+						},{	
+							"operator":"&&",
+							"function":"f.and",
+							"operands":2  
+						},{	
+							"operator":"||",
+							"function":"f.or",
+							"operands":2 
+						;~ },{	
+							;~ "operator":"?",
+							;~ "function":"f.ter",
+							;~ "operands":3  
+						;~ },{	
+							;~ "operator":":",
+							;~ "function":"",
+							;~ "operands":3,
+							;~ "priority":"?"
+						},{	
+							"operator":":=",
+							"function":"f.set",
+							"operands":2  
+						},{	
+							"operator":"=>",
+							"function":"f.fset",
+							"operands":2  
+						},{	
+							"operator":",",
+							"function":",",
+							"operands":0  
+						},					
+					]
+
+
+
+	static replace := []
+	static op := {}
+
+	funcnator(s) {
+		if !this.ranOnce {
+			this.init()
+			this.ranOnce := true
+		}
+		;dict := {}
+		dprint("Original  : " s)
+		dict := f.saveStrings(s)
+		s := f.replaceStrings(s, dict)
+		dprint("Str Saved : " s)
+		s := f.replaceOp(s)
+		dprint("Op tokens : " s)
+		s := f.functionate(s)
+		dprint("Func Form : " s)
+		s := f.cleanParen(s)
+		dprint("De-paren  : " s)
+		s := f.restoreStrings(s, dict)
+		dprint("Func Form : " s)
+		return s
+	}
+
+	init() {
+		;setup our lookup arrays
+		for k, v in f.operators {
+			char := chr(f.basecode + k)
+			len := StrLen(v.operator)
+			if len == 3 { 	;longer operators to be replaced first
+				f.replace[1, v.operator] := char
+			}
+			else if len == 2 {
+				f.replace[2, v.operator] := char
+			} 
+			else {
+				f.replace[3, v.operator] := char
+			}
+			f.op[char] := {}
+			f.op[char].function := v.function
+			f.op[char].operands := v.operands
+			if v.priority == "" {
+				f.op[char].priority := k
+			}
+			else {
+				for i, j in f.operators {
+					if j.operator == v.priority {
+						f.op[char].priority := i
+						break
+					}
+				}
+					
+				if f.op[char].priority == "" {
+					msgbox "error with shared priority"
+				}
+			}
+		}
+	}
+
+	;replace strings with tokens so they don't get parsed
+	;Note: this does not escape quotes
+	saveStrings(s, quote := '"', token := 0x2DDF) {
+		token := chr(token)	;some character hopefully no one else uses
+		dict := {}
+		
+		;find strings
+		qc := 0
+		startPos := 1
+		loop Parse s {
+			if A_LoopField == quote {
+				qc++
+				if Mod(qc, 2) {
+					;even number quotation characters mark beginning of string
+					startPos := A_Index
+				}
+				else {
+					;build out dictionary so we can swap strings for tokens later
+					dict[token . startPos . token] := SubStr(s, startPos, A_Index-startPos + 1)
+				}
+				
+			}
+		}
+		
+		;replace strings with tokens
+		for k, v in dict {
+			s := StrReplace(s, v, k)
+		}
+		
+		return dict
+	}
+	
+	replaceStrings(s, dict, quote := '"') {
+		for k, v in dict {
+			s := StrReplace(s, v, k)
+		}
+		return s
+	}
+	
+	;restore strings
+	restoreStrings(s, dict, quote := '"') {
+		for k, v in dict {
+			s := StrReplace(s, k, v)
+		}
+		return s
+	}
+	
+	cleanParen(s) {
+
+		pc := 0
+		bc := 0
+		loop Parse s {
+			if A_LoopField == "(" {
+				pc++
+			}
+			else if A_LoopField == ")" {
+				pc--
+			}	
+		}
+		if bc || pc {
+			msgbox("None matching number of parenthesis or brackets!")
+		}
+
+		while true {
+			doubleParen := InStr(s, "((")
+			if !doubleParen {
+				break
+			}
+			
+			loop Parse s {
+				if A_Index == doubleParen + 1 {
+					pc := 0
+				}
+				if A_LoopField == "(" {
+					pc++
+				}
+				else if A_LoopField == ")" {
+					pc--
+				}
+				if A_Index > doubleParen && !pc {
+					s := SubStr(s, 1, A_Index - 1) . SubStr(s, A_Index + 1)
+					s := SubStr(s, 1, doubleParen - 1) . SubStr(s, doubleParen + 1)
+					break
+				}
+			}
+		}
+		
+		while true {
+			spaceParen := InStr(s, " (")
+			if !spaceParen {
+				break
+			}
+			
+			loop Parse s {
+				if A_Index == spaceParen + 1 {
+					pc := 1
+				}
+				if A_LoopField == "(" {
+					pc++
+				}
+				else if A_LoopField == ")" {
+					pc--
+				}
+				if A_Index > spaceParen && !pc {
+					s := SubStr(s, 1, A_Index - 1) . SubStr(s, A_Index + 1)
+					s := SubStr(s, 1, spaceParen) . SubStr(s, spaceParen + 2)
+					break
+				}
+			}
+		}
+		
+		return s
+	}
+
+	replaceOp(s) {
+		;iterate over operators for replacement
+		for k, v in f.replace {
+			for i, j in f.replace[k] {
+				s := StrReplace(s, i, j)
+			}	
+		}
+		return s
+	}
+	
+	hasOperators(s) {
+		loop Parse s {
+			if f.op.HasKey(A_LoopField){
+				return A_Index
+			}
+		}
+		return 0
+	}
+	
+	functionate(s) {
+		
+		loop {
+			sArr := []
+			bc := 0
+			pc := 0
+			lastPos := 1
+			len := StrLen(s)
+			highestPriorityLevel := 999
+			highestPriorityIndex := 0
+			sArr_Index := 0
+			loop parse s {
+				if A_LoopField == "(" {
+					pc++
+				}	
+				else if A_LoopField == ")" {
+					pc--
+				}	
+				else if A_LoopField == "[" {
+					bc++
+				}	
+				else if A_LoopField == "]" {
+					bc--
+				}
+			
+				if !pc && !bc && f.op[A_LoopField] {
+					stmp := SubStr(s, lastPos, A_Index - lastPos)
+					
+					sArr.push(stmp)
+					sArr_Index++
+					sArr.push(A_LoopField)
+					sArr_Index++
+					
+					if f.op[A_LoopField].priority < highestPriorityLevel {
+						highestPriorityLevel := f.op[A_LoopField].priority
+						highestPriorityIndex := sArr_Index
+					}
+					lastPos := A_Index + 1
+				}
+				if A_Index == len && SubStr(s, lastPos)!="" {
+					stmp := SubStr(s, lastPos)
+					sArr.push(stmp)
+					sArr_Index++
+				}
+			}
+			
+			;since operator are substitued for unreadable single width characters
+			;we will output its readalbe name here in SciTE => fileappend( message "`n", "*")
+			for k, v in sArr {
+				sArr[k] := Trim(v, " `t`n`r")
+				if f.op[sArr[k]] {	;if we have an operator, get its human readable name
+					opNameStr := " = " f.operators[f.op[sArr[k]].priority].operator
+				}
+				else {
+					opNameStr :=  ""
+				}
+			}
+			
+			if highestPriorityIndex > 0 {
+				;if we have something like a comma wwith low precedence and does not need to be wrapped 
+				;inside a function, we assign its operands value as zero and it will be replaced
+				;with its original form here
+				if !f.op[sArr[highestPriorityIndex]].operands {
+					sArr[highestPriorityIndex] := f.op[sArr[highestPriorityIndex]].function
+				}
+				else if f.op[sArr[highestPriorityIndex]].operands > 1 {
+					functionForm := f.op[sArr[highestPriorityIndex]].function 
+						. "(" sArr[highestPriorityIndex - 1] 
+						. ", " . sArr[highestPriorityIndex + 1] . ")" 
+					sArr.RemoveAt(highestPriorityIndex - 1, 3)
+					sArr.InsertAt(highestPriorityIndex - 1, functionForm)
+				}
+				else {
+					functionForm := f.op[sArr[highestPriorityIndex]].function 
+						. "(" . sArr[highestPriorityIndex + 1] . ")" 	
+					sArr.RemoveAt(highestPriorityIndex, 2)	
+					sArr.InsertAt(highestPriorityIndex, functionForm)
+				}
+			}
+			
+			for k, v in sArr {
+				opPos := f.hasOperators(sArr[k])
+				if !f.op[sArr[k]] && opPos {
+					
+					len := StrLen(sArr[k])
+					pPos := InStr(sArr[k], "(")
+					bPos := InStr(sArr[k], "[")
+					if bPos && bPos < pPos || !pPos { ;array
+						part1end := bPos
+						part2start := InStr(sArr[k], "]", , -1)
+					} 
+					else if pPos && pPos < bPos || !bPos { ;function
+						part1end := pPos
+						part2start := InStr(sArr[k], ")", , -1)
+					}
+					else { ;neither
+						msgbox("Houston, we have a problem!")
+					}
+					part1 := SubStr(sArr[k], 1, part1end)
+					mid := SubStr(sArr[k], part1end + 1, part2start - 1 - part1end)
+					part2 := SubStr(sArr[k], part2start)
+					
+					
+					sArr[k] := part1 . f.functionate(mid) . part2
+				}
+			}	
+			
+			s := f.join(sArr) 
+			
+		} until (!highestPriorityIndex)
+		
+		if SubStr(s, 1, 1) == "(" && SubStr(s, -1) == ")"
+			s := SubStr(s, 2, -1)
+		
+		return s
+	}
+
+	join(arr, start:=1, end:=-1) {
+		if end := -1 {
+			end := arr.Length()
+		}
+		str := ""
+		loop end - start + 1 {
+			str .= arr[start + A_Index - 1]
+		}
+		return str
+	}
+
+	;debug output to be used with SciTE4AutoHotkey
+	dp(msg) {
+		fileappend(msg "`n", "*")
+	}
+	
 	
 	;A few functions that I have defined are listed here.  Scroll way down for the expression parser.
+	
+	fset(a, b) {
+		;implemented inside f.parse.function
+	}
 	
 	;just binds it back, maybe turn off mapping for this key, too?
 	restore(key) {
@@ -107,20 +583,9 @@ class f {
 		;implemented inside f.parse.function
 	}
 	
-	;assignment, can be used to assign array:  set("a", f.add(1+5), 1,2,5) => a[1][2][5] := 6
-	set(var, expr, ind*) {	
-		global
-		
-		if ind.Length() {
-			if !f.parse.isObject(var) {
-				%var% := []
-			}
-			%var%[ind*] := expr
-		} 
-		else {
-			%var% := expr
-		}
-		return %var%
+	;assignment
+	set(ByRef var, expr) {	
+		;implemented inside f.parse.function
 	}
 	
 	free(var) {
@@ -134,6 +599,24 @@ class f {
 			r += v + 0
 		}
 		return r
+	}
+	
+	sub(param*) {
+		;this handles the negative case
+		if param.length() == 1 {
+			return -param[1]
+		}
+		else if param.length() == 2 {
+			return param[1] - param[2]
+		}
+		else {
+			Msgbox("this function only takes one or two parameters")
+			return 0
+		}
+	}
+	
+	pow(a, b) {
+		return a ** b
 	}
 	
 	;not a cat.  it combines strings
@@ -165,7 +648,7 @@ class f {
 		return a == b
 	}
 	
-	eq2(a, b) {
+	eqci(a, b) {
 		return a = b
 	}
 	
@@ -183,6 +666,10 @@ class f {
 	
 	lteq(a, b) {
 		return a <= b
+	}
+	
+	regex(a, b) {
+		return RegExMatch(a, b)
 	}
 	
 	;The parser starts here
@@ -231,13 +718,12 @@ class f {
 		function(funcString, funcName, firstParenPos) {
 			global
 			
+			local skip := false
 			local parenCount := 0
 			local lastPos := firstParenPos + 1
 			
 			;output stuff
-			f.layer++
-
-			dprint("Expression: " f.parse.spaces(f.layer) funcString)
+			dprint("Expression: " funcString)
 			
 			local param2 := []
 			loop Parse funcString {
@@ -299,18 +785,23 @@ class f {
 			if funcName = "f.or" {
 				for _, v in param2 {
 					if f.parse.expr(v) {
-						return true
+						r := true
+						skip := true
+						break
 					}
 				}
 			}
 			else if funcName = "f.and" {
 				for _, v in param2 {
 					if !f.parse.expr(v) {
-						return false
+						r := false
+						skip := true
+						break
 					}
 				}
 			}
 			else if funcName = "f._if" {
+				
 				if f.parse.expr(param2[1]) {
 					return f.parse.expr(param2[2])
 				}	
@@ -319,8 +810,37 @@ class f {
 				}
 			}
 			else if funcName = "f.bind" {
-				Hotkey(StrReplace(param2[1], '"'), ()=>f.parse.expr(param2[2]))
-				return true
+				r := Hotkey(StrReplace(param2[1], '"'), ()=>f.parse.expr(param2[2]))
+				skip := true
+			} 
+			else if funcName = "f.set" {
+				if param2[2] == "[]" {
+					r := %param2[1]% := []
+				}
+				else if param2[2] == "{}" {
+					r := %param2[1]% := {}
+				} 
+				else if f.parse.isObject(param2[1]) {
+					local arrInfo := f.parse.resolveArr(param2[1])
+					
+					local ind := []
+					for k, v in arrInfo {
+						if k == 1 {
+							local arrName := v
+						}
+						else {
+							ind.push(v)
+						}
+					}
+					r := %arrName%[ind*] := f.parse.expr(param2[2])
+				} 
+				else {
+					r := %param2[1]% := f.parse.expr(param2[2])
+				}
+				skip := true
+			}
+			else if fName == "fset" {
+				%param2[1]%(p*)=>%param2[2]%(p*)
 			}
 			else {
 				for k, v in param2 {
@@ -328,43 +848,75 @@ class f {
 				}
 			}
 			
-			;if calling a method
-			local firstDot := InStr(funcName, ".")
-			if firstDot {
-				local oName := SubStr(funcName, 1, firstDot - 1)
-				local str := SubStr(funcName, firstDot + 1)
-				local last := 1
-				local pArr := []
+			if !skip {
 				
-				Loop Parse str {
-					if A_LoopField == "."  {
-						pArr.push(SubStr(str, last, A_Index - last))
-						last := A_Index + 1
+				;if calling a method
+				local firstDot := InStr(funcName, ".")
+				if firstDot {
+					local oName := SubStr(funcName, 1, firstDot - 1)
+					local str := SubStr(funcName, firstDot + 1)
+					local last := 1
+					local pArr := []
+					
+					Loop Parse str {
+						if A_LoopField == "."  {
+							pArr.push(SubStr(str, last, A_Index - last))
+							last := A_Index + 1
+						}
+						if StrLen(str) == A_Index {
+							pArr.push(SubStr(str, last))
+						}
 					}
-					if StrLen(str) == A_Index {
-						pArr.push(SubStr(str, last))
+
+					local p := %oName%
+					local i := 1
+					while i < pArr.Length() {
+						p := p[ pArr[i++] ]
 					}
+					r := p[pArr[i++]](param*)
 				}
-
-				local p := %oName%
-				local i := 1
-				while i < pArr.Length() {
-					p := p[ pArr[i++] ]
+				;not a method, just a plain ol' function
+				else {
+					r := Func(funcName).Call(param*)
 				}
-				r := p[pArr[i++]](param*)
 			}
-			;not a method, just a plain ol' function
-			else {
-				r := Func(funcName).Call(param*)
-			}
-
+			
 			;output stuff
-			dprint("Return Val: " f.parse.spaces(f.layer) funcString " = " r)
-			f.layer--
+			dprint("Return Val: "  funcString " = " r)
 			
 			return r
 		}
 
+
+		resolveArr(str) {
+			bcount := 0
+			last := 1
+			pArr := []
+			bPos := InStr(str, "[")
+			name := SubStr(str, 1, bPos - 1)
+			str := SubStr(str, bPos)
+		
+			Loop Parse str {
+				if A_LoopField == "[" {
+					bcount++
+				}
+				else if A_LoopField == "]" {
+					bcount--
+				}
+				
+				if !bcount {
+					
+					tmp := f.parse.expr(SubStr(str, last + 1, A_Index - last - 1))
+					;msgbox("tmp:[" tmp "]")
+					;~ if StrLen(tmp)>0 {
+						pArr.push(tmp)
+						last := A_Index + 1
+					;~ }
+				}
+			}
+			return [name, pArr*]
+		}
+		
 		;handles arrays/object properties, only supports a[1][2][3] form
 		array(str, name) {
 			global
@@ -449,6 +1001,11 @@ class f {
 		;check to see if we have an object.  Placed inside try block because %var% throws an error when empty
 		isObject(s) {
 			global
+			
+			local bPos := InStr(s, "[")
+			if bPos {
+				s := SubStr(s, 1, bPos - 1)
+			}
 			try {
 				return IsObject(%s%)
 			}	
