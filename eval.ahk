@@ -254,6 +254,7 @@ class f {
 			f.op[char] := {}
 			f.op[char].function := v.function
 			f.op[char].operands := v.operands
+			f.op[char].operator := v.operator
 			if v.priority == "" {
 				f.op[char].priority := k
 			}
@@ -468,14 +469,22 @@ class f {
 				;inside a function, we assign its operands value as zero and it will be replaced
 				;with its original form here
 				if !f.op[sArr[highestPriorityIndex]].operands {
-					sArr[highestPriorityIndex] := f.op[sArr[highestPriorityIndex]].function
+					sArr[highestPriorityIndex] := f.op[sArr[highestPriorityIndex]].operator
 				}
 				else if f.op[sArr[highestPriorityIndex]].operands > 1 {
-					functionForm := f.op[sArr[highestPriorityIndex]].function 
-						. "(" sArr[highestPriorityIndex - 1] 
-						. ", " . sArr[highestPriorityIndex + 1] . ")" 
-					sArr.RemoveAt(highestPriorityIndex - 1, 3)
-					sArr.InsertAt(highestPriorityIndex - 1, functionForm)
+					;if we have a postfix operator like * that behaves differently based on its position
+					if sArr[highestPriorityIndex + 1] == "" { ;operand2 doesn't exist
+						if f.op[sArr[highestPriorityIndex]].operator == "*" {
+							sArr[highestPriorityIndex - 1] :=  sArr[highestPriorityIndex - 1] . f.op[sArr[highestPriorityIndex]].operator
+							sArr.RemoveAt(highestPriorityIndex, 1)
+						}
+					} else {
+						functionForm := f.op[sArr[highestPriorityIndex]].function 
+							. "(" sArr[highestPriorityIndex - 1] 
+							. ", " . sArr[highestPriorityIndex + 1] . ")" 
+						sArr.RemoveAt(highestPriorityIndex - 1, 3)
+						sArr.InsertAt(highestPriorityIndex - 1, functionForm)
+					}
 				}
 				else {
 					functionForm := f.op[sArr[highestPriorityIndex]].function 
@@ -726,15 +735,21 @@ class f {
 			dprint("Expression: " funcString)
 			
 			local param2 := []
+			local quoteCount := 0
 			loop Parse funcString {
 				if A_LoopField == "(" {
 					parenCount++
 				}
 				else if A_LoopField == ")" {
 					parenCount--
+				} else if A_LoopField == '"' {
+					quoteCount++
+				}
+				else if A_LoopField == '"' {
+					quoteCount--
 				}
 				
-				if parenCount==1 && A_LoopField == "," {
+				if !Mod(quoteCount, 2) && parenCount==1 && A_LoopField == "," {
 					_param := SubStr(funcString, lastPos, A_Index - lastPos)
 					_param := Trim(_param, " `t`n`r")
 					
