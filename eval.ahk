@@ -187,23 +187,23 @@ class f {
 							"operator":"||",
 							"function":"f.or",
 							"operands":2 
-						;~ },{	
-							;~ "operator":"?",
-							;~ "function":"f.ter",
-							;~ "operands":3  
-						;~ },{	
-							;~ "operator":":",
-							;~ "function":"",
-							;~ "operands":3,
-							;~ "priority":"?"
+						},{	
+							"operator":"?",
+							"function":"f._if",
+							"operands":3  
+						},{	
+							"operator":":",
+							"function":"f._if",
+							"operands":3,
+							"priority":"?"
 						},{	
 							"operator":":=",
 							"function":"f.set",
 							"operands":2  
-						},{	
-							"operator":"=>",
-							"function":"f.fset",
-							"operands":2  
+						;~ },{	
+							;~ "operator":"=>",
+							;~ "function":"f.fset",
+							;~ "operands":2  
 						},{	
 							"operator":",",
 							"function":",",
@@ -465,6 +465,7 @@ class f {
 			}
 			
 			if highestPriorityIndex > 0 {
+				
 				;if we have something like a comma wwith low precedence and does not need to be wrapped 
 				;inside a function, we assign its operands value as zero and it will be replaced
 				;with its original form here
@@ -473,12 +474,43 @@ class f {
 				}
 				else if f.op[sArr[highestPriorityIndex]].operands > 1 {
 					;if we have a postfix operator like * that behaves differently based on its position
-					if sArr[highestPriorityIndex + 1] == "" { ;operand2 doesn't exist
-						if f.op[sArr[highestPriorityIndex]].operator == "*" {
-							sArr[highestPriorityIndex - 1] :=  sArr[highestPriorityIndex - 1] . f.op[sArr[highestPriorityIndex]].operator
-							sArr.RemoveAt(highestPriorityIndex, 1)
+					if sArr[highestPriorityIndex + 1] == "" && f.op[sArr[highestPriorityIndex]].operator == "*" { ;operand2 doesn't exist
+						sArr[highestPriorityIndex - 1] :=  sArr[highestPriorityIndex - 1] . f.op[sArr[highestPriorityIndex]].operator
+						sArr.RemoveAt(highestPriorityIndex, 1)
+					;ternary operators has 3 operands	
+					} else if f.op[sArr[highestPriorityIndex]].operands == 3 {
+						;this might be redundant but I don't want to fully test it
+						if f.op[sArr[highestPriorityIndex]].operator == "?" {
+							if sArr[highestPriorityIndex - 1] != "" && sArr[highestPriorityIndex + 1] != "" 
+								&& sArr[highestPriorityIndex + 2] != "" && sArr[highestPriorityIndex + 3] != "" {
+								sArr[highestPriorityIndex - 1] := f.op[sArr[highestPriorityIndex]].function 
+								. "(" sArr[highestPriorityIndex - 1] . ", " . sArr[highestPriorityIndex + 1] 
+								. ", " . sArr[highestPriorityIndex + 3] . ")" 
+								sArr.RemoveAt(highestPriorityIndex, 4)
+							}
+							else {
+								sArr[highestPriorityIndex] := "?" ;get rid of the token so won't go into infinite loop
+								Msgbox("Missing operand(s) or operator : ")
+							}
+						}	; 1 ? 3 : 5
+						else if f.op[sArr[highestPriorityIndex]].operator == ":" {
+							if sArr[highestPriorityIndex - 3] != "" && sArr[highestPriorityIndex -2 ] != ""
+								&& sArr[highestPriorityIndex -1] != "" && sArr[highestPriorityIndex + 1] != "" {
+								sArr[highestPriorityIndex - 3] := f.op[sArr[highestPriorityIndex]].function 
+								. "(" sArr[highestPriorityIndex - 3] . ", " . sArr[highestPriorityIndex - 1] 
+								. ", " . sArr[highestPriorityIndex + 1] . ")" 
+								sArr.RemoveAt(highestPriorityIndex - 2, 4)
+							}
+							else {
+								sArr[highestPriorityIndex] := ":"
+								Msgbox("Missing operand(s) or operator : ")
+							}
 						}
-					} else {
+						else {
+							msgbox("this is not suppose to happen... something other than ternary with 3 operands?")
+						}
+					}
+					else {
 						functionForm := f.op[sArr[highestPriorityIndex]].function 
 							. "(" sArr[highestPriorityIndex - 1] 
 							. ", " . sArr[highestPriorityIndex + 1] . ")" 
@@ -550,9 +582,6 @@ class f {
 	
 	;A few functions that I have defined are listed here.  Scroll way down for the expression parser.
 	
-	fset(a, b) {
-		;implemented inside f.parse.function
-	}
 	
 	;just binds it back, maybe turn off mapping for this key, too?
 	restore(key) {
