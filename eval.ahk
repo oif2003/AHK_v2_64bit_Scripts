@@ -16,7 +16,7 @@ The Idea:
 
 gui := GuiCreate()
 gui.SetFont(, "Consolas")
-editBox := gui.Add("Edit", "r1 w600", 'f._if(InputBox()>100, MsgBox("Greater than 100"), MsgBox("Less than or equal to 100"))')
+editBox := gui.Add("Edit", "r1 w600", 'InputBox() > 100 ? MsgBox("Greater than 100") : MsgBox("Less than or equal to 100")')
 btn := gui.Add("Button", "Default w0 h0", "OK")
 btn.OnEvent("Click", "eval")
 gui.Add("Text", , "Output:")
