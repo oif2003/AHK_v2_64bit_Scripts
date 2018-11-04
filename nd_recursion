@@ -67,7 +67,7 @@ paa(r)
 /* ==================================
 	Function Starts Here
 */ ==================================
-g(a, firstRun := true) {	;call this function without using the firstRun parameter
+g(a, firstRun := true) {		;call this function without using the firstRun parameter
 	static r, t 			;stores return array of objects and the current array of objects
 	
 	if firstRun {			;reset static variables on fresh runs
@@ -75,22 +75,22 @@ g(a, firstRun := true) {	;call this function without using the firstRun paramete
 	}
 	
 	b := a.Clone()
-	if b.length() {							;if b has anything left
-		for k, v in b.pop() {				;work on last array, and reduce size of array of array
+	if b.length() {					;if b has anything left
+		for k, v in b.pop() {			;work on last array, and reduce size of array of array
 			t.InsertAt(1, v), g(b, false) 	;append object at the front of array t
-		}									;do this again for b (whose size has been reduced)
+		}					;do this again for b (whose size has been reduced)
 	}
-	else {									;if b is empty
-		if !r.length() {					;if this is the first run	
-			r.push(t), t := []				;record result and reset t
-		} else {							;if this is not the first run
+	else {							;if b is empty
+		if !r.length() {				;if this is the first run	
+			r.push(t), t := []			;record result and reset t
+		} else {					;if this is not the first run
 			_t := r[r.push()].Clone()		;get previous t stored in r
 			loop t.length() {			
 				_t[A_Index] := t[A_Index]	;replace appropriate spots with new t
 			}			
-			r.push(_t), t := []				;push this as modified t back in r
-		}									;reset t at the end of the branch
+			r.push(_t), t := []			;push this as modified t back in r
+		}						;reset t at the end of the branch
 	}
 	
-	return r								;we will only receive return value of the first call
+	return r						;we will only receive return value of the first call
 }
