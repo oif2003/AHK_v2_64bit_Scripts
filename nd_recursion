@@ -64,6 +64,9 @@ pn("Results:")
 paa(r)
 
 
+/* ==================================
+	Function Starts Here
+*/ ==================================
 g(a, firstRun := true) {	;call this function without using the firstRun parameter
 	static r, t 			;stores return array of objects and the current array of objects
 	
