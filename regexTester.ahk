@@ -3,7 +3,7 @@
 	Tested with build: AutoHotkey_2.0-a100-52515e2
 */
 #singleinstance force
-
+#include debugprint.ahk
 ;Default Values
 	defaultText := "Your text goes here"
 	defaultRegex := "i)(your).(text)"
@@ -49,6 +49,12 @@ doRegEx() {
 	;reset the result box
 	result.value := ""
 	
+	;force use of \ as escape character
+	if InStr(regex.value, "``") {
+		result.value .= "Must use \ (backslash) as escape character instead of `` (backtick)."
+		return
+	}
+	
 	;get startpos value
 	if startpos.value == "" {
 		spv := 1
@@ -70,14 +76,16 @@ doRegEx() {
 			;use RegExReplace outputVar to count number of matches
 			RegExReplace(text.value, regex.value , , matchCount, , spv)
 			;get replacedLength
-			replacedLength := StrLen(text.value) - StrLen(RegExReplace(text.value, regex.value , , , 1, spv))
+			replacedLength := StrLen(text.value) - StrLen(RegExReplace(text.value, regex.value , "", , 1, spv))
+			;get matched text
+			matchedText := SubStr(text.Value, pos, replacedLength)
+			matchedText := "`t" StrReplace(matchedText, "`n", "`n`t")
 			
 			;print results
 			result.value .= "First match found at position: " pos "`n"
 			result.value .= "Number of matches: " matchCount "`n"
 			result.value .= "Matched: `n"
-			matchedText := SubStr(text.Value, pos, replacedLength)
-			matchedText := "`t" StrReplace(matchedText, "`n", "`n`t")
+
 			result.value .= matchedText "`n`n"
 			result.value .= "Number of captured subpatterns: " m.Count() "`n"
 			numDigits := floor(log(m.count())) + 1		;get number of digits of m.count()
@@ -99,8 +107,12 @@ doRegEx() {
 			result.value .= "No matches found.`n"
 		}
 	}
-	;RegExMatch failed (likely due to invalid parameters)
-	catch {
-		result.value .= "Invalid parameters.`n"
+	;RegExMatch exceptions : straight from AutoHotkey documentation
+	catch e {
+		result.value .= e.message 
+		if e.message == "PCRE execution error." {
+			result.value .= " (" e.extra ")`n"
+			result.value .= '`nLikely errors: "too many possible empty-string matches" (-22), "recursion too deep" (-21), and "reached match limit" (-8). If these happen, try to redesign the pattern to be more restrictive, such as replacing each * with a ?, +, or a limit like {0,3} wherever feasible.'
+		}
 	}
 }
