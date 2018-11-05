@@ -67,7 +67,7 @@ doRegEx() {
 		;match found, print results
 		if pos {
 			result.value .= "Found at position: " pos "`n"
-			result.value .= "Number of matches: " m.Count() "`n"
+			result.value .= "Number of captured subpatterns: " m.Count() "`n"
 			numDigits := floor(log(m.count())) + 1		;get number of digits of m.count()
 			Loop m.Count() {
 				nameStr := m.Name(A_Index) ? " (" m.Name(A_Index) ")" : ""
