@@ -64,9 +64,14 @@ doRegEx() {
 	;attempt RegExMatch
 	try {
 		pos := RegExMatch(text.value, regex.value, m, spv)
-		;match found, print results
+		;match found
 		if pos {
-			result.value .= "Found at position: " pos "`n"
+			;use RegExReplace outputVar to count number of matches
+			RegExReplace(text.value, regex.value , , matchCount, , spv)
+			
+			;print results
+			result.value .= "First match found at position: " pos "`n"
+			result.value .= "Number of matches: " matchCount "`n"
 			result.value .= "Number of captured subpatterns: " m.Count() "`n"
 			numDigits := floor(log(m.count())) + 1		;get number of digits of m.count()
 			Loop m.Count() {
@@ -76,6 +81,7 @@ doRegEx() {
 								. ", len: " m.Len(A_Index) " => "
 				result.value .=  m.value(A_Index) "`n"
 			}
+			
 			;untested, included for completeness sake
 			if m.Mark() {
 				result.value .= "Name of last encountered (*MARK:NAME): " m.Mark() "`n"
