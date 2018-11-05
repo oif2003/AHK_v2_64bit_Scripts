@@ -44,7 +44,7 @@
 
 ;When values in regex, startpos, or text changes this function is triggered
 doRegEx() {
-	global gui, regex, text, result, startpos
+	global gui, regex, text, result, startpos, font
 	
 	;reset the result box
 	result.value := ""
@@ -64,14 +64,21 @@ doRegEx() {
 	;attempt RegExMatch
 	try {
 		pos := RegExMatch(text.value, regex.value, m, spv)
+	
 		;match found
 		if pos {
 			;use RegExReplace outputVar to count number of matches
 			RegExReplace(text.value, regex.value , , matchCount, , spv)
+			;get replacedLength
+			replacedLength := StrLen(text.value) - StrLen(RegExReplace(text.value, regex.value , , , 1, spv))
 			
 			;print results
 			result.value .= "First match found at position: " pos "`n"
 			result.value .= "Number of matches: " matchCount "`n"
+			result.value .= "Matched: `n"
+			matchedText := SubStr(text.Value, pos, replacedLength)
+			matchedText := "`t" StrReplace(matchedText, "`n", "`n`t")
+			result.value .= matchedText "`n`n"
 			result.value .= "Number of captured subpatterns: " m.Count() "`n"
 			numDigits := floor(log(m.count())) + 1		;get number of digits of m.count()
 			Loop m.Count() {
