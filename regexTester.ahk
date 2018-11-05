@@ -44,7 +44,7 @@
 
 ;When values in regex, startpos, or text changes this function is triggered
 doRegEx() {
-	global gui, regex, text, result, startpos, font
+	global gui, regex, text, result, startpos
 	
 	;reset the result box
 	result.value := ""
