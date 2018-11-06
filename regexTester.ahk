@@ -3,7 +3,7 @@
 	Tested with build: AutoHotkey_2.0-a100-52515e2
 */
 #singleinstance force
-#include debugprint.ahk
+;#include debugprint.ahk
 ;Default Values
 	defaultText := "Your text goes here"
 	defaultRegex := "i)(your).(text)"
