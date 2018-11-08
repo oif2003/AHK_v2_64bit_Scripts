@@ -1,6 +1,6 @@
 #SingleInstance force
 
-a := new classAutoPath(A_WinDir, "w500")
+a := new classAutoPath("msgbox")
 while true {
 	if a.ready || a.error
 		break
@@ -21,13 +21,14 @@ Class classAutoPath {
 	listPrev := []
 	endChar := "*"
 	
-	__New(defaultPath := "", guiShowOpt := "w600") {
+	__New(onComplete := "", defaultPath := "", guiShowOpt := "w600") {
 		;make sure provided path is valid
 		if !DirExist(defaultPath)
 			defaultPath := A_ScriptDir
 		if SubStr(defaultPath, -1) != "\"			
 			defaultPath := defaultPath . "\"
 		this.defaultPath := defaultPath
+		this.onComplete := onComplete
 		
 		;Gui stuff
 		this.gui := GuiCreate(guiOpt)
@@ -63,6 +64,7 @@ Class classAutoPath {
 		this.ready := 1
 		this.cleanUp()
 		this.gui.Destroy()
+		func(this.onComplete).call(this.path)
 	}
 	
 	;When we exit before a path/file is submitted by user
