@@ -3,7 +3,7 @@
 	Tested with build: AutoHotkey_2.0-a100-52515e2
 */
 #singleinstance force
-;#include debugprint.ahk
+
 ;Default Values
 	defaultText := "Your text goes here"
 	defaultRegex := "i)(your).(text)"
@@ -70,15 +70,13 @@ doRegEx() {
 	;attempt RegExMatch
 	try {
 		pos := RegExMatch(text.value, regex.value, m, spv)
-	
 		;match found
 		if pos {
 			;use RegExReplace outputVar to count number of matches
 			RegExReplace(text.value, regex.value , , matchCount, , spv)
-			;get replacedLength
-			replacedLength := StrLen(text.value) - StrLen(RegExReplace(text.value, regex.value , "", , 1, spv))
+
 			;get matched text
-			matchedText := SubStr(text.Value, pos, replacedLength)
+			matchedText := SubStr(text.Value, pos, m.Len)
 			matchedText := "`t" StrReplace(matchedText, "`n", "`n`t")
 			
 			;print results
