@@ -51,15 +51,16 @@ pn("Variadic function sum test: 2 levels deep")
 test4 := db(arr3, (x) => sum(x*), 2)	;goes down two levels
 p(test4), pn()
 
-pn("Deep copy of ar3")
+pn("Deep copy of arr3")
 test5 := db(arr3)	;when funtion is not provided, returns deep copy of array
 p(test5), pn("`n-----------------------------------------------------------------------------------------------------------------")
 
-pn("Object example:")
+pn("Content of obj:")
+p(obj, 1), pn()
+
+pn("Convert hours to HH:MM format in obj")
 test6 := db(obj, (x) => formatHours(x))	;iterate over all elements
-p(test6, 1), pn()
-pn("Original Object:")
-p(obj, 1)
+p(test6, 1)
 
 ;functions used in the above examples
 dist(x*) {
@@ -78,6 +79,7 @@ formatHours(h) {
 	m := (h - floor(h)) * 60
 	return format("{1:02d}:{2:02d}", floor(h), m)
 }
+
 ;------------------------------------------------------------
 ;deep broadcast for n levels
 ; a = array/object
