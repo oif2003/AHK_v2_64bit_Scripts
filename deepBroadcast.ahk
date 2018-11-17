@@ -13,6 +13,12 @@ arr2 := [
 			, [31, 32]
 		]
 
+arr3 := [	  
+			  [[111,112], [221,222]]
+			, [[211,212], [221,222]]
+			, [[311,312], [321,322]]
+		]
+
 obj := 	{	  mon:{breakfast:6.5, lunch:11.5, dinner:18}
 			, tue:{breakfast:6, lunch:11, dinner:18.5}
 			, wed:{breakfast:7, lunch:12.5, dinner:19}
@@ -25,30 +31,33 @@ obj := 	{	  mon:{breakfast:6.5, lunch:11.5, dinner:18}
 pn("Content of arr1:")
 p(arr1), pn()
 
-pn("Variadic function sum test along 1st dimension")
-test1 := db(arr1, (x) => sum(x*), 1)	;only goes one level
-p(test1), pn()
-
 pn("Multiply each element by 10")
 test2 := db(arr1, (x) => x * 10)		;when depth is left blank defaults to max
-p(test2), pn()
-
-pn("Deep copy of arr1")
-test3 := db(arr1)	;when funtion is not provided, returns deep copy of array
-p(test3), pn("`n")
+p(test2), pn("`n-----------------------------------------------------------------------------------------------------------------")
 
 pn("Content of arr2:")
 pn("(each row corresponds to possible values for x, y, z respectively)")
 p(arr2), pn()
 
-pn("Calculate distance on (x, y, z) sets defined by arr2")
+pn("Calculate distance from the origin on (x, y, z) sets defined by arr2")
 list := ls(arr2)					;generate 1D array with list of points/coordinates
-test4 := db(list, (x)=>dist(x*), 1)	;broadcast distance function to list
+test3 := db(list, (x)=>dist(x*), 1)	;broadcast distance function to list
+p(test3, 1), pn("`n-----------------------------------------------------------------------------------------------------------------")
+
+pn("Content of arr3:")
+p(arr3), pn()
+
+pn("Variadic function sum test: 2 levels deep")
+test4 := db(arr3, (x) => sum(x*), 2)	;goes down two levels
 p(test4), pn()
 
+pn("Deep copy of ar3")
+test5 := db(arr3)	;when funtion is not provided, returns deep copy of array
+p(test5), pn("`n-----------------------------------------------------------------------------------------------------------------")
+
 pn("Object example:")
-test5 := db(obj, (x) => formatHours(x))	;iterate over all elements
-p(test5, 1), pn()
+test6 := db(obj, (x) => formatHours(x))	;iterate over all elements
+p(test6, 1), pn()
 pn("Original Object:")
 p(obj, 1)
 
@@ -78,21 +87,18 @@ formatHours(h) {
 db(a, f := "", n := 0x7FFFFFFF, run1 := true) {
 	static _n
 	if run1
-		_n := 0
+		_n := 1
 	
-	p_n := ++_n
 	if _n <= n && isObject(a) {
-		b := {}		
+		_n++, b := {}		
 		for k, v in a
 			b[k] := db(v, f, n, false)
-		return b
+		return (_n--, b)
 	}
-	else {
-		_n := p_n
+	else
 		if f != ""
 			return f.call(a)
 		else return a
-	}
 }
 
 ;------------------------------------------------------------
