@@ -495,6 +495,7 @@ class document {
 			WinWait("ahk_pid" cPid,, 10)
 			DllCall("AttachConsole","uint",cPid)
 			A_DetectHiddenWindows := _A_DetectHiddenWindows
+			OnExit(()=>cleanUp(cPid))
 		}
 
 		objShell := ComObjCreate("WScript.Shell")
@@ -509,6 +510,15 @@ class document {
 		SplitPath(file, fileName)
 		RegExMatch(r, "(?<=" fileName ":)(.|`r|`n)*(?=CertUtil)", match)
 		return match.Value(0)
+		
+		;cleanUp function called on script exit (OnExit)
+		cleanUp(_cPid) {
+			_A_DetectHiddenWindows := A_DetectHiddenWindows
+			A_DetectHiddenWindows := true
+			DllCall("FreeConsole", "UInt")
+			WinKill("ahk_pid" _cPid)
+			A_DetectHiddenWindows := _A_DetectHiddenWindows
+		}
 	}
 }
 
