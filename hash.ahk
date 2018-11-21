@@ -6,6 +6,8 @@
 
 ; == A quick demo ==
 #SingleInstance force
+
+msgbox A_PtrSize
 gui := GuiCreate(, "String and file hash demo")
 gui.SetFont("s10", "Consolas")
 editbox := gui.Add("Edit", "r19 w1000 readonly -VSCROLL")
@@ -55,8 +57,9 @@ hashFile(file, algo) {	;using CertUtil
 		WinWait("ahk_pid" cPid,, 10)
 		DllCall("AttachConsole","uint",cPid)
 		A_DetectHiddenWindows := _A_DetectHiddenWindows
+		OnExit("cleanUp")
 	}
-
+	
 	objShell := ComObjCreate("WScript.Shell")
 	objExec := objShell.Exec('certutil -hashfile "' file '" ' algo)
 	strStdOut:=strStdErr:=""
@@ -69,6 +72,14 @@ hashFile(file, algo) {	;using CertUtil
 	SplitPath(file, fileName)
 	RegExMatch(r, "(?<=" fileName ":)(.|`r|`n)*(?=CertUtil)", match)
 	return StrUpper(StrReplace(match.Value(0), "`n"))
+	
+	;close hidden cmd windows
+	cleanUp() {
+		_A_DetectHiddenWindows := A_DetectHiddenWindows
+		A_DetectHiddenWindows := true
+		WinKill("ahk_pid" cPid)
+		A_DetectHiddenWindows := _A_DetectHiddenWindows
+	}
 }
 
 ;-------------------------------------------------------------------------------------------------------------------
