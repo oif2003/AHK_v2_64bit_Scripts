@@ -4,7 +4,7 @@
 	Supported hash algorithms: MD2, MD4, MD5, SHA1, SHA256, SHA384, SHA512
 */
 #SingleInstance force
-;Gui stuff for text and file examples
+;Gui stuff for string and file examples
 gui := GuiCreate(, "String and file hash demo")
 gui.SetFont("s10", "Consolas")
 editbox := gui.Add("Edit", "r19 w1000 readonly -VSCROLL")
@@ -25,7 +25,7 @@ for _, v in Hash_Types {
 }
 
 
-hashFile(file, algo) {	;using CertUtil to get SHA256
+hashFile(file, algo) {	;using CertUtil
 	static cPid := 0
 	static Supported_Hash_Types := Object("MD2",_,"MD4",_,"MD5",_,"SHA1",_,"SHA256",_,"SHA384",_,"SHA512",_)
 	
