@@ -7,7 +7,6 @@
 ; == A quick demo ==
 #SingleInstance force
 
-msgbox A_PtrSize
 gui := GuiCreate(, "String and file hash demo")
 gui.SetFont("s10", "Consolas")
 editbox := gui.Add("Edit", "r19 w1000 readonly -VSCROLL")
