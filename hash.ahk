@@ -55,7 +55,7 @@ hashFile(file, algo) {	;using CertUtil
 	r := strStdOut strStdErr
 	SplitPath(file, fileName)
 	RegExMatch(r, "(?<=" fileName ":)(.|`r|`n)*(?=CertUtil)", match)
-	return StrReplace(match.Value(0), "`n")
+	return StrUpper(StrReplace(match.Value(0), "`n"))
 }
 
 
