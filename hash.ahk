@@ -12,17 +12,17 @@ gui.SetFont("s10", "Consolas")
 editbox := gui.Add("Edit", "r19 w1000 readonly -VSCROLL")
 gui.Show()
 
-String_To_Hash := "Hash me!"		;string to hash
+Str_To_Hash  := "Hash me!"			;string to hash
 File_To_Hash := A_ScriptFullPath	;file to hash
 
 ;algorithms to try
 Hash_Types := ["MD2","MD4","MD5","SHA1","SHA256","SHA384","SHA512","AES"]
 
 ;hashString attempts
-editbox.Value .= "string = " String_To_Hash "`n"
+editbox.Value .= "string = " Str_To_Hash "`n"
 for _, v in Hash_Types {
 	editbox.Value .= format("{:-6}", v) " = " 
-					. hashString(String_To_Hash, v)	;calling the hash function
+					. hashString(Str_To_Hash, v)	;calling the hash function
 					. (k != Hash_Types.Length() ? "`n" : "")
 }
 
@@ -30,7 +30,7 @@ for _, v in Hash_Types {
 editbox.Value .= "`nfile   = " File_To_Hash "`n"
 for _, v in Hash_Types {
 	editbox.Value .= format("{:-6}", v) " = "
-					. hashFile(File_To_Hash, v) ;calling the hash function
+					. hashFile(File_To_Hash, v)		;calling the hash function
 					. (k != Hash_Types.Length() ? "`n" : "")
 }
 ; == end of demo ==
@@ -49,6 +49,7 @@ hashFile(file, algo) {	;using CertUtil
 		return "Unsupported request"
 	}
 	
+	;create and hide command window if we don't already have one
 	if !cPid {
 		_A_DetectHiddenWindows := A_DetectHiddenWindows
 		A_DetectHiddenWindows := true
@@ -56,9 +57,10 @@ hashFile(file, algo) {	;using CertUtil
 		WinWait("ahk_pid" cPid,, 10)
 		DllCall("AttachConsole","uint",cPid)
 		A_DetectHiddenWindows := _A_DetectHiddenWindows
-		OnExit("cleanUp")
+		OnExit(()=>cleanUp(cPid))
 	}
 	
+	;run command and get output
 	objShell := ComObjCreate("WScript.Shell")
 	objExec := objShell.Exec('certutil -hashfile "' file '" ' algo)
 	strStdOut:=strStdErr:=""
@@ -67,16 +69,19 @@ hashFile(file, algo) {	;using CertUtil
 	while !objExec.StdErr.AtEndOfStream
 		 strStdErr := objExec.StdErr.ReadAll()
 
+	;parse output
 	r := strStdOut strStdErr
 	SplitPath(file, fileName)
 	RegExMatch(r, "(?<=" fileName ":)(.|`r|`n)*(?=CertUtil)", match)
-	return StrUpper(StrReplace(match.Value(0), "`n"))
+	r := StrUpper(StrReplace(match.Value(0), "`n"))
+	return r
 	
-	;close hidden cmd windows
-	cleanUp() {
+	;cleanUp function called on script exit (OnExit)
+	cleanUp(_cPid) {
 		_A_DetectHiddenWindows := A_DetectHiddenWindows
 		A_DetectHiddenWindows := true
-		WinKill("ahk_pid" cPid)
+		DllCall("FreeConsole", "UInt")
+		WinKill("ahk_pid" _cPid)
 		A_DetectHiddenWindows := _A_DetectHiddenWindows
 	}
 }
