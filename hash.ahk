@@ -3,28 +3,41 @@
 	by oif2003 (21 Nov 2018)
 	Supported hash algorithms: MD2, MD4, MD5, SHA1, SHA256, SHA384, SHA512
 */
+
+; == A quick demo ==
 #SingleInstance force
-;Gui stuff for string and file examples
 gui := GuiCreate(, "String and file hash demo")
 gui.SetFont("s10", "Consolas")
 editbox := gui.Add("Edit", "r19 w1000 readonly -VSCROLL")
 gui.Show()
 
-String_To_Hash := "Hash me!"
+String_To_Hash := "Hash me!"		;string to hash
+File_To_Hash := A_ScriptFullPath	;file to hash
+
+;algorithms to try
 Hash_Types := ["MD2","MD4","MD5","SHA1","SHA256","SHA384","SHA512","AES"]
 
+;hashString attempts
 editbox.Value .= "string = " String_To_Hash "`n"
 for _, v in Hash_Types {
-	editbox.Value .= format("{:-6}", v) " = " hashString(String_To_Hash, v) (k != Hash_Types.Length() ? "`n" : "")
+	editbox.Value .= format("{:-6}", v) " = " 
+					. hashString(String_To_Hash, v)	;calling the hash function
+					. (k != Hash_Types.Length() ? "`n" : "")
 }
 
-editbox.Value .= "`n"
-editbox.Value .= "file   = " A_ScriptFullPath "`n"
+;hashFile attempts
+editbox.Value .= "`nfile   = " File_To_Hash "`n"
 for _, v in Hash_Types {
-	editbox.Value .= format("{:-6}", v) " = " hashFile(A_ScriptFullPath, v) (k != Hash_Types.Length() ? "`n" : "")
+	editbox.Value .= format("{:-6}", v) " = "
+					. hashFile(File_To_Hash, v) ;calling the hash function
+					. (k != Hash_Types.Length() ? "`n" : "")
 }
+; == end of demo ==
 
 
+;-------------------------------------------------------------------------------------------------------------------
+;hashFile(FullFilePath, Algorithm) - valid Algorithms: MD2, MD4, MD5, SHA1, SHA256, SHA384, SHA512
+;-------------------------------------------------------------------------------------------------------------------
 hashFile(file, algo) {	;using CertUtil
 	static cPid := 0
 	static Supported_Hash_Types := Object("MD2",_,"MD4",_,"MD5",_,"SHA1",_,"SHA256",_,"SHA384",_,"SHA512",_)
@@ -58,7 +71,9 @@ hashFile(file, algo) {	;using CertUtil
 	return StrUpper(StrReplace(match.Value(0), "`n"))
 }
 
-
+;-------------------------------------------------------------------------------------------------------------------
+;hashString(String, Algorithm) - valid Algorithms: MD2, MD4, MD5, SHA1, SHA256, SHA384, SHA512
+;-------------------------------------------------------------------------------------------------------------------
 hashString(string, algo) {
 	;These are the supported formats, maybe someone else can get the rest to work?
 	static Supported_Hash_Types := Object("MD2",_,"MD4",_,"MD5",_,"SHA1",_,"SHA256",_,"SHA384",_,"SHA512",_)
