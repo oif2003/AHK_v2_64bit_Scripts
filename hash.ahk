@@ -78,11 +78,11 @@ hashString(string, algo) {
 	
 		;https://docs.microsoft.com/en-us/windows/desktop/api/Bcrypt/nf-bcrypt-bcryptopenalgorithmprovider
 		DllCall("Bcrypt.dll\BCryptOpenAlgorithmProvider"
-		  ,"Ptr*", phandle
-		  ,"Str", algo
-		  ,"Str", 
-		  ,"UInt", 0
-		  ,"UInt"	;returned error code see winnt.h
+			,"Ptr*", phandle
+			,"Str", algo
+			,"Str", 
+			,"UInt", 0
+			,"UInt"	;returned error code see winnt.h
 		)
 
 		;https://docs.microsoft.com/en-us/windows/desktop/api/Bcrypt/nf-bcrypt-bcryptgetproperty
