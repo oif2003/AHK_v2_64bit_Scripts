@@ -10,7 +10,7 @@
 ;setup gui stuff
 gui := GuiCreate(, "String and file hash demo")
 gui.SetFont("s10", "Consolas")
-editbox := gui.Add("Edit", "r19 w1020 readonly")
+editbox := gui.Add("Edit", "r22 w1020 readonly")
 gui.Show()
 
 Str_To_Hash  := "Hash me!"			;string to hash
@@ -22,41 +22,54 @@ Hash_Types := ["MD2","MD4","MD5","SHA1","SHA256","SHA384","SHA512","AES"]
 ;hashString attempts
 editbox.Value .= "string = " Str_To_Hash "`n"
 for _, v in Hash_Types {
-	editbox.Value .= format("{:-6}", v) " = " 
-					. hashString(Str_To_Hash, v)	;calling the hash function
-					. (k != Hash_Types.Length() ? "`n" : "")
+	if !hash := hashString(Str_To_Hash, v)	{ ;calling the hash function
+		hash := "Unsupported request"
+	}
+	editbox.Value .= format("{:-6}", v) " = " . hash . (k != Hash_Types.Length() ? "`n" : "")
 }
 
 ;hashFile attempts
 editbox.Value .= "`nfile   = " File_To_Hash "`n"
 for _, v in Hash_Types {
-	editbox.Value .= format("{:-6}", v) " = "
-					. hashFile(File_To_Hash, v)		;calling the hash function
-					. (k != Hash_Types.Length() ? "`n" : "")
+	if !hash := hashFile(file_To_Hash, v)	{ ;calling the hash function
+		hash := (e := hashFile()) ? e : "Unsupported request"
+	}
+	editbox.Value .= format("{:-6}", v) " = " . hash . (k != Hash_Types.Length() ? "`n" : "")
 }
+
+;getting error message from bad CertUtil requests
+editbox.Value .= hashFile("no such file", "MD5") "`n"
+editbox.Value .= "The last error message was: "
+editbox.Value .= hashFile() "`n"
 ; == end of demo ==
 
 
 ;-------------------------------------------------------------------------------------------------------------------
 ;hashFile(FullFilePath, Algorithm) - valid Algorithms: MD2, MD4, MD5, SHA1, SHA256, SHA384, SHA512
 ;-------------------------------------------------------------------------------------------------------------------
-hashFile(file, algo) {	;using CertUtil
+hashFile(file := "", algo := "") {	;using CertUtil
 	static cPid := 0
+	static lastError := ""	;stores last error message: strStdOut
 	static Supported_Hash := Object("MD2",_,"MD4",_,"MD5",_,"SHA1",_,"SHA256",_,"SHA384",_,"SHA512",_)
+	
+	;return last error message
+	if !file {
+		return lastError
+	}
 	
 	;check to see if requested algorithm is supported
 	algo := StrUpper(algo)
 	if !Supported_Hash.HasKey(algo) {
-		return "Unsupported request"
+		return
 	}
 	
 	;create and hide command window if we don't already have one
 	if !cPid {
 		_A_DetectHiddenWindows := A_DetectHiddenWindows
 		A_DetectHiddenWindows  := true
-		Run(A_ComSpec " /k ",,"Hide", cPid)
-		WinWait("ahk_pid" cPid,, 10)
-		DllCall("AttachConsole","uint",cPid)
+		Run(A_ComSpec " /k ",, "Hide", cPid)
+		WinWait("ahk_pid" cPid, , 10)
+		DllCall("AttachConsole","uint", cPid)
 		A_DetectHiddenWindows  := _A_DetectHiddenWindows
 		
 		;clean up on exiting script
@@ -71,12 +84,13 @@ hashFile(file, algo) {	;using CertUtil
 	}
 
 	;parse output
-	SplitPath(file, fileName)
-	if RegExMatch(strStdOut, "(?<=" fileName ":)(.|`r|`n)*(?=CertUtil)", match) {
-		return StrUpper(StrReplace(match.Value(0), "`n"))
+	start := InStr(strStdOut, file ":") + StrLen(file) + 1
+	end := InStr(strStdOut, "CertUtil: -hashfile command completed successfully.", , -1) - 1
+	if start < end {
+		return StrUpper(SubStr(strStdOut, start + 2, end - start - 2))
 	} else {
-		;something went wrong, dump output
-		return strStdOut
+		lastError := strStdOut
+		return
 	}
 	
 	;cleanUp function called on script exit (OnExit)
@@ -99,7 +113,7 @@ hashString(string, algo) {
 	;check to see if requested algorithm is supported
 	algo := StrUpper(algo)
 	if !Supported_Hash.HasKey(algo) {
-		return "Unsupported request"
+		return
 	}
 	
 	;continue if algorithm is supported
