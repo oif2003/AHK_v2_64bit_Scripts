@@ -20,17 +20,16 @@ cFunc := useTCC()	;cFunc is a string that holds the full path to cFunc.dll (incl
 #define DLL __attribute__ ((dllexport)) 	//need to export each function that will be called from AutoHotkey
 #include <math.h>							//include files that ships with TCC are supported
 */
-csqrt(10, x), msgbox(x)
+msgbox(csqrt(10))
 
-	csqrt(a, ByRef b) => DllCall(cFunc "csqrt", "Double", a, "Double*", b)
+	csqrt(a) => DllCall(cFunc "csqrt", "Double", a, "Double")
 	/*_C func
-	double sqrt(double x);
-	int csqrt(double a, double * b) DLL		//must include "DLL" for each exported function
-	{										//it is equivalent to " __attribute__ ((dllexport))"
-		* b = sqrt(a);						//see #define in header
-		return 0;
-	}
-	*/
+		double sqrt(double x);
+		int csqrt(double a) DLL					//must include "DLL" for each exported function
+		{										//it is equivalent to " __attribute__ ((dllexport))"
+			return sqrt(a);						//see #define in header
+		}
+	*/	;end of block comment signals end of C function block
 
 ;-------------------------------------------------------------------------------------------------------------
 ;string example|
@@ -193,7 +192,7 @@ useTCC(directory := "") {
 		,cFuncDllStr := SubStr(script, dllStart, dllEnd - dllStart + 1)
 		,dataStart := InStr(cFuncDllStr, '"data": "') + 10
 		,dataEnd := InStr(cFuncDllStr, '"', , dataStart) - 1
-		,data := SubStr(cFuncDllStr, dataStart, dataEnd - dataStart)
+		,data := SubStr(cFuncDllStr, dataStart, dataEnd - dataStart + 1)
 		,SHAstart := InStr(cFuncDllStr, '"description": "') + 16
 		,SHAend := InStr(cFuncDllStr, '"', , SHAstart) - 1
 		,SHA := SubStr(cFuncDllStr, SHAstart, SHAend - SHAstart + 1)
